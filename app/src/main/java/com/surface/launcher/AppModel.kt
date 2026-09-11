@@ -4,9 +4,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 
 data class AppModel(
-    val id: String,
+    override val id: String,
     val name: String,
     val packageName: String,
     val intent: Intent,
-    val iconBitmap: Bitmap? = null
-)
+    val iconBitmap: Bitmap? = null,
+    override val spanX: Int = 1,
+    override val spanY: Int = 1
+) : GridItem

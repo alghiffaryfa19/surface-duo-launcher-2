@@ -10,13 +10,13 @@ class DragDropState {
     var dragPosition by mutableStateOf(Offset.Zero)
     var dragOffset by mutableStateOf(Offset.Zero)
     
-    var draggedApp by mutableStateOf<AppModel?>(null)
+    var draggedItem by mutableStateOf<GridItem?>(null)
     var sourcePane by mutableStateOf(-1)
     var sourceIndex by mutableStateOf(-1)
 
-    fun onDragStart(app: AppModel, pane: Int, index: Int, offset: Offset) {
+    fun onDragStart(item: GridItem, pane: Int, index: Int, offset: Offset) {
         isDragging = true
-        draggedApp = app
+        draggedItem = item
         sourcePane = pane
         sourceIndex = index
         dragPosition = offset
@@ -28,7 +28,7 @@ class DragDropState {
 
     fun onDragInterrupt() {
         isDragging = false
-        draggedApp = null
+        draggedItem = null
         sourcePane = -1
         sourceIndex = -1
         dragOffset = Offset.Zero

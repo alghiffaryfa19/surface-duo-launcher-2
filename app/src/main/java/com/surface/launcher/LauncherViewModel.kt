@@ -9,12 +9,16 @@ import androidx.lifecycle.ViewModel
 
 class LauncherViewModel : ViewModel() {
     
-    val pane1Apps = mutableStateListOf<AppModel?>().apply {
+    val pane1Apps = mutableStateListOf<GridItem?>().apply {
         repeat(9) { add(null) }
     }
     
-    val pane2Apps = mutableStateListOf<AppModel?>().apply {
+    val pane2Apps = mutableStateListOf<GridItem?>().apply {
         repeat(9) { add(null) }
+    }
+    
+    val dockApps = mutableStateListOf<GridItem?>().apply {
+        repeat(4) { add(null) }
     }
     
     private var allApps = listOf<AppModel>()
@@ -56,14 +60,19 @@ class LauncherViewModel : ViewModel() {
             )
         }
         
-        // Populate initial page (page 0 on right pane, left pane empty)
+        // Populate dock with first 4 apps if available
+        for (i in 0 until minOf(4, allApps.size)) {
+            dockApps[i] = allApps[i]
+        }
+        
+        // Populate initial page (skip first 4 since they are in dock)
         pageIndex = 0
         populatePane2()
     }
     
     private fun populatePane2() {
         pane2Apps.clear()
-        val startIndex = pageIndex * 9
+        val startIndex = (pageIndex * 9) + 4 // offset for dock
         for (i in 0 until 9) {
             if (startIndex + i < allApps.size) {
                 pane2Apps.add(allApps[startIndex + i])
@@ -73,14 +82,22 @@ class LauncherViewModel : ViewModel() {
         }
     }
 
-    fun moveApp(fromPane: Int, fromIndex: Int, toPane: Int, toIndex: Int) {
-        val sourceList = if (fromPane == 1) pane1Apps else pane2Apps
-        val targetList = if (toPane == 1) pane1Apps else pane2Apps
+    fun moveItem(fromPane: Int, fromIndex: Int, toPane: Int, toIndex: Int) {
+        val sourceList = when (fromPane) {
+            1 -> pane1Apps
+            2 -> pane2Apps
+            else -> dockApps
+        }
+        val targetList = when (toPane) {
+            1 -> pane1Apps
+            2 -> pane2Apps
+            else -> dockApps
+        }
 
-        val appToMove = sourceList[fromIndex] ?: return
+        val itemToMove = sourceList[fromIndex] ?: return
         
         val temp = targetList[toIndex]
-        targetList[toIndex] = appToMove
+        targetList[toIndex] = itemToMove
         sourceList[fromIndex] = temp
     }
 
@@ -88,7 +105,7 @@ class LauncherViewModel : ViewModel() {
         pane1Apps.clear()
         pane1Apps.addAll(pane2Apps)
         
-        val maxPages = Math.ceil(allApps.size / 9.0).toInt()
+        val maxPages = Math.ceil((allApps.size - 4) / 9.0).toInt()
         if (pageIndex < maxPages - 1) {
             pageIndex++
         }
@@ -102,9 +119,9 @@ class LauncherViewModel : ViewModel() {
             
             pageIndex--
             pane1Apps.clear()
-            val previousStartIndex = (pageIndex - 1) * 9
+            val previousStartIndex = ((pageIndex - 1) * 9) + 4
             for (i in 0 until 9) {
-                if (previousStartIndex >= 0 && previousStartIndex + i < allApps.size) {
+                if (previousStartIndex >= 4 && previousStartIndex + i < allApps.size) {
                     pane1Apps.add(allApps[previousStartIndex + i])
                 } else {
                     pane1Apps.add(null)
