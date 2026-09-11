@@ -25,3 +25,14 @@ jobs:
       
     - name: Build with Gradle
       run: ./gradlew assembleDebug
+
+    - name: Upload APK to Release
+      uses: softprops/action-gh-release@v1
+      if: github.event_name == 'push'
+      with:
+        tag_name: development
+        name: Development Build
+        files: app/build/outputs/apk/debug/app-debug.apk
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
