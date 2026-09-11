@@ -1,8 +1,12 @@
 package com.surface.launcher
 
+import android.content.Intent
+import android.graphics.Bitmap
+
 data class AppModel(
     val id: String,
     val name: String,
-    val iconRes: Int? = null,
-    val colorHex: Long = 0xFF444444 // placeholder color
+    val packageName: String,
+    val intent: Intent,
+    val iconBitmap: Bitmap? = null
 )

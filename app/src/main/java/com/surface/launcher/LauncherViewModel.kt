@@ -1,64 +1,114 @@
 package com.surface.launcher
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.ViewModel
 
 class LauncherViewModel : ViewModel() {
-    // Each pane is just a list of AppModels.
-    // For simplicity, pane1 is the left pane, pane2 is the right pane.
     
-    // Default pane 1 is empty, pane 2 has 9 apps (3x3 grid)
     val pane1Apps = mutableStateListOf<AppModel?>().apply {
-        repeat(9) { add(null) } // 9 slots
+        repeat(9) { add(null) }
     }
     
     val pane2Apps = mutableStateListOf<AppModel?>().apply {
+        repeat(9) { add(null) }
+    }
+    
+    private var allApps = listOf<AppModel>()
+    private var pageIndex = 0
+
+    fun loadInstalledApps(context: Context) {
+        val pm = context.packageManager
+        val intent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        
+        val activities = pm.queryIntentActivities(intent, 0)
+        
+        allApps = activities.mapIndexed { index, resolveInfo ->
+            val iconDrawable = resolveInfo.loadIcon(pm)
+            val bitmap = try {
+                iconDrawable.toBitmap(width = 150, height = 150)
+            } catch (e: Exception) {
+                null
+            }
+            
+            val componentName = android.content.ComponentName(
+                resolveInfo.activityInfo.applicationInfo.packageName,
+                resolveInfo.activityInfo.name
+            )
+            
+            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                component = componentName
+            }
+            
+            AppModel(
+                id = resolveInfo.activityInfo.packageName + index,
+                name = resolveInfo.loadLabel(pm).toString(),
+                packageName = resolveInfo.activityInfo.packageName,
+                intent = launchIntent,
+                iconBitmap = bitmap
+            )
+        }
+        
+        // Populate initial page (page 0 on right pane, left pane empty)
+        pageIndex = 0
+        populatePane2()
+    }
+    
+    private fun populatePane2() {
+        pane2Apps.clear()
+        val startIndex = pageIndex * 9
         for (i in 0 until 9) {
-            add(AppModel(id = "app_$i", name = "App $i"))
+            if (startIndex + i < allApps.size) {
+                pane2Apps.add(allApps[startIndex + i])
+            } else {
+                pane2Apps.add(null)
+            }
         }
     }
 
-    // Function to handle dropping an app to a new slot
     fun moveApp(fromPane: Int, fromIndex: Int, toPane: Int, toIndex: Int) {
         val sourceList = if (fromPane == 1) pane1Apps else pane2Apps
         val targetList = if (toPane == 1) pane1Apps else pane2Apps
 
         val appToMove = sourceList[fromIndex] ?: return
         
-        // If target slot has an app, swap them. Otherwise, just move.
         val temp = targetList[toIndex]
         targetList[toIndex] = appToMove
         sourceList[fromIndex] = temp
     }
 
-    // Swipe left logic: Move pane2 to pane1, load new apps into pane2
-    private var pageIndex = 1
     fun swipeLeft() {
-        // Move pane2 contents to pane1
         pane1Apps.clear()
         pane1Apps.addAll(pane2Apps)
         
-        // Load new apps into pane2
-        pane2Apps.clear()
-        pageIndex++
-        for (i in 0 until 9) {
-            val appIndex = (pageIndex * 9) + i
-            pane2Apps.add(AppModel(id = "app_$appIndex", name = "App $appIndex"))
+        val maxPages = Math.ceil(allApps.size / 9.0).toInt()
+        if (pageIndex < maxPages - 1) {
+            pageIndex++
         }
+        populatePane2()
     }
     
-    // Swipe right logic: Move pane1 to pane2, load previous apps into pane1
     fun swipeRight() {
         if (pageIndex > 0) {
             pane2Apps.clear()
             pane2Apps.addAll(pane1Apps)
             
-            pane1Apps.clear()
             pageIndex--
+            pane1Apps.clear()
+            val previousStartIndex = (pageIndex - 1) * 9
             for (i in 0 until 9) {
-                val appIndex = (pageIndex * 9) + i
-                pane1Apps.add(AppModel(id = "app_$appIndex", name = "App $appIndex"))
+                if (previousStartIndex >= 0 && previousStartIndex + i < allApps.size) {
+                    pane1Apps.add(allApps[previousStartIndex + i])
+                } else {
+                    pane1Apps.add(null)
+                }
             }
         }
     }
